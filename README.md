@@ -5,7 +5,7 @@ A simple Streamlit chat interface that connects directly to Ollama.
 ## 🚀 Features
 
 - **Direct Ollama Integration**: No intermediate servers needed
-- **Model Selection**: Choose from your installed Ollama models
+- **Dynamic Model Loading**: Automatically detects and loads all available Ollama models
 - **Temperature Control**: Adjust response creativity
 - **Connection Testing**: Built-in health check
 - **Model Discovery**: Automatically detect available models
@@ -98,8 +98,9 @@ The app will open in your browser at `http://localhost:8501`.
 ## ⚙️ Configuration
 
 - **Ollama URL**: Default is `http://localhost:11434`
-- **Model**: Select from available models in the dropdown
+- **Model**: Automatically loads all models available in your Ollama installation
 - **Temperature**: Control response randomness (0.0 = deterministic, 1.0 = creative)
+- **Auto-refresh**: Models are cached for 30 seconds and can be manually refreshed
 
 ## 🔧 Available Commands
 

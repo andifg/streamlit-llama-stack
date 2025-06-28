@@ -24,12 +24,37 @@ ollama_url = st.sidebar.text_input(
     help="URL of your Ollama server"
 )
 
-model_name = st.sidebar.selectbox(
-    "Model",
-    options=["llama3.2:3b", "llama3.1:8b", "codellama:7b", "mistral:7b", "llama2:7b"],
-    index=0,
-    help="Select the model to use"
-)
+# Get available models from Ollama
+@st.cache_data(ttl=30)  # Cache for 30 seconds to avoid repeated API calls
+def get_ollama_models():
+    """Get list of available models from Ollama with caching"""
+    try:
+        response = requests.get(f"{ollama_url}/api/tags", timeout=5)
+        response.raise_for_status()
+        data = response.json()
+        models = [model["name"] for model in data.get("models", [])]
+        return models if models else []
+    except:
+        return []
+
+# Load available models
+available_models = get_ollama_models()
+
+if available_models:
+    st.sidebar.success(f"✅ Found {len(available_models)} model(s)")
+    model_name = st.sidebar.selectbox(
+        "Model",
+        options=available_models,
+        index=0,
+        help="Select the model to use"
+    )
+else:
+    st.sidebar.error("❌ No models found in Ollama")
+    st.sidebar.markdown("**Please:**")
+    st.sidebar.markdown("1. Ensure Ollama is running: `ollama serve`")
+    st.sidebar.markdown("2. Pull a model: `ollama pull llama3.2:3b`")
+    st.sidebar.markdown("3. Click 'Refresh Models' below")
+    model_name = None
 
 # Chat parameters
 temperature = st.sidebar.slider(
@@ -43,7 +68,6 @@ temperature = st.sidebar.slider(
 
 # Main app
 st.title("🦙 Ollama Chat")
-st.markdown("Chat with your local Ollama models")
 
 # Initialize chat history
 if "messages" not in st.session_state:
@@ -87,16 +111,7 @@ def call_ollama(prompt: str, model: str, temperature: float) -> Optional[str]:
     except Exception as e:
         return f"❌ Unexpected error: {str(e)}"
 
-# Function to get available models
-def get_available_models() -> list:
-    """Get list of available models from Ollama"""
-    try:
-        response = requests.get(f"{ollama_url}/api/tags", timeout=5)
-        response.raise_for_status()
-        data = response.json()
-        return [model["name"] for model in data.get("models", [])]
-    except:
-        return []
+# This function is now replaced by the cached get_ollama_models() function above
 
 # Function to test connection
 def test_connection() -> bool:
@@ -125,32 +140,30 @@ with st.sidebar:
     with col2:
         if st.button("Refresh Models"):
             with st.spinner("Loading models..."):
-                models = get_available_models()
-                if models:
-                    st.success(f"Found {len(models)} models")
-                    st.write("Available models:")
-                    for model in models:
-                        st.write(f"• {model}")
-                else:
-                    st.warning("No models found")
+                # Clear the cache to force reload
+                get_ollama_models.clear()
+                st.rerun()  # Refresh the page to reload models
 
 # Chat input
-if prompt := st.chat_input("What would you like to ask?"):
-    # Add user message to chat history
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    
-    # Display user message
-    with st.chat_message("user"):
-        st.markdown(prompt)
-    
-    # Generate and display assistant response
-    with st.chat_message("assistant"):
-        with st.spinner("Thinking..."):
-            response = call_ollama(prompt, model_name, temperature)
-            st.markdown(response)
-    
-    # Add assistant response to chat history
-    st.session_state.messages.append({"role": "assistant", "content": response})
+if model_name:  # Only show chat input if a model is available
+    if prompt := st.chat_input("What would you like to ask?"):
+        # Add user message to chat history
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        
+        # Display user message
+        with st.chat_message("user"):
+            st.markdown(prompt)
+        
+        # Generate and display assistant response
+        with st.chat_message("assistant"):
+            with st.spinner("Thinking..."):
+                response = call_ollama(prompt, model_name, temperature)
+                st.markdown(response)
+        
+        # Add assistant response to chat history
+        st.session_state.messages.append({"role": "assistant", "content": response})
+else:
+    st.info("🔄 Please ensure Ollama is running and models are available to start chatting.")
 
 # Clear chat history
 with st.sidebar:
