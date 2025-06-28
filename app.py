@@ -1,9 +1,17 @@
 import streamlit as st
 import requests
 import json
-import sys
-import os
+import logging
 from typing import Optional
+
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+logger.info("🚀 Streamlit Ollama Chat starting...")
 
 # Configure the page
 st.set_page_config(
@@ -38,9 +46,11 @@ def get_ollama_models():
         return []
 
 # Load available models
+logger.info(f"🔗 Connecting to Ollama at: {ollama_url}")
 available_models = get_ollama_models()
 
 if available_models:
+    logger.info(f"📊 Found {len(available_models)} models: {available_models}")
     st.sidebar.success(f"✅ Found {len(available_models)} model(s)")
     model_name = st.sidebar.selectbox(
         "Model",
@@ -49,6 +59,7 @@ if available_models:
         help="Select the model to use"
     )
 else:
+    logger.warning("⚠️ No models found in Ollama!")
     st.sidebar.error("❌ No models found in Ollama")
     st.sidebar.markdown("**Please:**")
     st.sidebar.markdown("1. Ensure Ollama is running: `ollama serve`")
@@ -72,11 +83,6 @@ st.title("🦙 Ollama Chat")
 # Initialize chat history
 if "messages" not in st.session_state:
     st.session_state.messages = []
-
-# Display chat messages from history on app rerun
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
 
 # Function to call Ollama API
 def call_ollama(prompt: str, model: str, temperature: float) -> Optional[str]:
@@ -131,10 +137,13 @@ with st.sidebar:
     
     with col1:
         if st.button("Test Connection"):
+            logger.info("🔍 Testing connection to Ollama...")
             with st.spinner("Testing..."):
                 if test_connection():
+                    logger.info("✅ Connection successful!")
                     st.success("✅ Connected!")
                 else:
+                    logger.error("❌ Connection failed!")
                     st.error("❌ No connection")
     
     with col2:
@@ -144,9 +153,16 @@ with st.sidebar:
                 get_ollama_models.clear()
                 st.rerun()  # Refresh the page to reload models
 
+# Display chat messages from history
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
 # Chat input
 if model_name:  # Only show chat input if a model is available
     if prompt := st.chat_input("What would you like to ask?"):
+        logger.info(f"💬 User message: {prompt[:50]}{'...' if len(prompt) > 50 else ''}")
+        
         # Add user message to chat history
         st.session_state.messages.append({"role": "user", "content": prompt})
         
@@ -157,7 +173,12 @@ if model_name:  # Only show chat input if a model is available
         # Generate and display assistant response
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
+                logger.info(f"🤖 Generating response with {model_name} (temp: {temperature})")
                 response = call_ollama(prompt, model_name, temperature)
+                if response:
+                    logger.info(f"✅ Response generated ({len(response)} chars)")
+                else:
+                    logger.error("❌ No response received")
                 st.markdown(response)
         
         # Add assistant response to chat history
@@ -169,6 +190,7 @@ else:
 with st.sidebar:
     st.markdown("---")
     if st.button("🗑️ Clear Chat History"):
+        logger.info(f"🗑️ Clearing chat history ({len(st.session_state.messages)} messages)")
         st.session_state.messages = []
         st.rerun()
 
@@ -188,18 +210,4 @@ with st.sidebar:
     4. Start chatting!
     """)
 
-# Programmatic startup - allows running with 'python3 app.py'
-if __name__ == "__main__":
-    import subprocess
-    import sys
-    
-    # Get the current file path
-    current_file = os.path.abspath(__file__)
-    
-    # Run streamlit with the current file
-    subprocess.run([
-        sys.executable, "-m", "streamlit", "run", current_file,
-        "--server.headless", "true",
-        "--server.enableCORS", "false",
-        "--server.enableXsrfProtection", "false"
-    ]) 
+ 

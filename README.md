@@ -70,26 +70,8 @@ ollama list
 
 ## 🎯 Running the App
 
-You can run the app in multiple ways:
-
-### Option 1: Direct Python execution (Recommended)
 ```bash
-# Activate Poetry environment (if not already active)
-poetry shell
-
-# Run with Python directly
-python3 app.py
-```
-
-### Option 2: Using Poetry run
-```bash
-# Run directly with Poetry (no need to activate shell)
-poetry run python3 app.py
-```
-
-### Option 3: Traditional Streamlit CLI
-```bash
-# If you prefer the traditional way
+# Run the Streamlit app with Poetry
 poetry run streamlit run app.py
 ```
 
