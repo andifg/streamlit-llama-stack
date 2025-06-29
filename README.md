@@ -4,17 +4,19 @@ A simple Streamlit chat interface that connects directly to Ollama.
 
 ## 🚀 Features
 
-- **Direct Ollama Integration**: No intermediate servers needed
-- **Dynamic Model Loading**: Automatically detects and loads all available Ollama models
+- **Llama Stack Integration**: Uses Llama Stack client for model discovery
+- **Dynamic Model Loading**: Automatically detects and loads all available inference models
+- **Hybrid Architecture**: Llama Stack for models, Ollama for chat generation
 - **Temperature Control**: Adjust response creativity
-- **Connection Testing**: Built-in health check
+- **Connection Testing**: Built-in health check for both services
 - **Model Discovery**: Automatically detect available models
 
 ## 📋 Prerequisites
 
-- Python 3.9 or higher (excluding 3.9.7)
+- Python 3.12 or higher
 - [Poetry](https://python-poetry.org/) for dependency management
 - [Ollama](https://ollama.ai/) installed and running
+- [Llama Stack](https://github.com/meta-llama/llama-stack) server running
 
 ## 🛠️ Installation & Setup
 
@@ -37,7 +39,7 @@ pip install poetry
 # Clone or navigate to your project directory
 cd streamlit-ollama-chat
 
-# Install dependencies with Poetry
+# Install dependencies with Poetry (including llama-stack-client)
 poetry install
 
 # Activate the virtual environment
@@ -68,6 +70,19 @@ ollama pull llama3.2:3b
 ollama list
 ```
 
+### 4. Install and Setup Llama Stack
+
+```bash
+# Install Llama Stack
+pip install llama-stack
+
+# Configure Llama Stack to use Ollama
+llama stack configure
+
+# Start Llama Stack server (runs on port 8321 by default)
+llama stack run --port 8321
+```
+
 ## 🎯 Running the App
 
 ```bash
@@ -79,8 +94,9 @@ The app will open in your browser at `http://localhost:8501`.
 
 ## ⚙️ Configuration
 
-- **Ollama URL**: Default is `http://localhost:11434`
-- **Model**: Automatically loads all models available in your Ollama installation
+- **Llama Stack URL**: Default is `http://localhost:8321` (for model discovery)
+- **Ollama URL**: Default is `http://localhost:11434` (for chat generation)
+- **Model**: Automatically loads all inference models available via Llama Stack
 - **Temperature**: Control response randomness (0.0 = deterministic, 1.0 = creative)
 - **Auto-refresh**: Models are cached for 30 seconds and can be manually refreshed
 
@@ -118,18 +134,25 @@ poetry build
 
 1. **Connection Error**:
    - Ensure Ollama is running: `ollama serve`
-   - Check if port 11434 is available
+   - Ensure Llama Stack is running: `llama stack run --port 8321`
+   - Check if ports 11434 (Ollama) and 8321 (Llama Stack) are available
    - Use "Test Connection" button in sidebar
 
 2. **Model Not Found**:
-   - Pull the model: `ollama pull llama3.2:3b`
+   - Pull models in Ollama: `ollama pull llama3.2:3b`
    - Check available models: `ollama list`
-   - Use "Refresh Models" button to see installed models
+   - Ensure Llama Stack is configured to use Ollama
+   - Use "Refresh Models" button to reload from Llama Stack
 
 3. **Poetry Issues**:
    - Reinstall dependencies: `poetry install`
    - Clear cache: `poetry cache clear pypi --all`
    - Update Poetry: `poetry self update`
+
+4. **Llama Stack Issues**:
+   - Check Llama Stack configuration: `llama stack configure`
+   - Verify Ollama integration in Llama Stack
+   - Check Llama Stack logs for errors
 
 ## 📦 Recommended Models
 
@@ -151,10 +174,12 @@ ollama pull mistral:7b
 
 ```
 streamlit-ollama-chat/
-├── pyproject.toml     # Poetry configuration
-├── app.py            # Main Streamlit application
-├── README.md         # This file
-└── .venv/            # Virtual environment (created by Poetry)
+├── pyproject.toml          # Poetry configuration
+├── app.py                  # Main Streamlit application
+├── llama_stack_service.py  # Llama Stack service integration
+├── README.md               # This file
+├── .gitignore              # Git ignore patterns
+└── .venv/                  # Virtual environment (created by Poetry)
 ```
 
 ## 🔗 Useful Links

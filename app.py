@@ -3,6 +3,7 @@ import requests
 import json
 import logging
 from typing import Optional
+from llama_stack_service import LlamaStackService
 
 # Set up logging
 logging.basicConfig(
@@ -25,29 +26,35 @@ st.set_page_config(
 st.sidebar.title("⚙️ Configuration")
 st.sidebar.markdown("---")
 
-# Ollama configuration
-ollama_url = st.sidebar.text_input(
-    "Ollama URL",
-    value="http://localhost:11434",
-    help="URL of your Ollama server"
+# Llama Stack configuration
+llama_stack_url = st.sidebar.text_input(
+    "Llama Stack URL",
+    value="http://localhost:8321",
+    help="URL of your Llama Stack server"
 )
 
-# Get available models from Ollama
+# Ollama configuration (for direct chat communication)
+ollama_url = st.sidebar.text_input(
+    "Ollama URL", 
+    value="http://localhost:11434",
+    help="URL of your Ollama server for chat communication"
+)
+
+# Create Llama Stack service instance
+@st.cache_resource
+def get_llama_stack_service(base_url: str) -> LlamaStackService:
+    """Get cached Llama Stack service instance"""
+    return LlamaStackService(base_url)
+
+# Get available models from Llama Stack
 @st.cache_data(ttl=30)  # Cache for 30 seconds to avoid repeated API calls
-def get_ollama_models():
-    """Get list of available models from Ollama with caching"""
-    try:
-        response = requests.get(f"{ollama_url}/api/tags", timeout=5)
-        response.raise_for_status()
-        data = response.json()
-        models = [model["name"] for model in data.get("models", [])]
-        return models if models else []
-    except:
-        return []
+def get_llama_stack_models(base_url: str):
+    """Get list of available inference models from Llama Stack with caching"""
+    service = get_llama_stack_service(base_url)
+    return service.get_available_models()
 
 # Load available models
-logger.info(f"🔗 Connecting to Ollama at: {ollama_url}")
-available_models = get_ollama_models()
+available_models = get_llama_stack_models(llama_stack_url)
 
 if available_models:
     logger.info(f"📊 Found {len(available_models)} models: {available_models}")
@@ -59,11 +66,11 @@ if available_models:
         help="Select the model to use"
     )
 else:
-    logger.warning("⚠️ No models found in Ollama!")
-    st.sidebar.error("❌ No models found in Ollama")
+    logger.warning("⚠️ No models found in Llama Stack!")
+    st.sidebar.error("❌ No models found in Llama Stack")
     st.sidebar.markdown("**Please:**")
-    st.sidebar.markdown("1. Ensure Ollama is running: `ollama serve`")
-    st.sidebar.markdown("2. Pull a model: `ollama pull llama3.2:3b`")
+    st.sidebar.markdown("1. Ensure Llama Stack is running: `llama stack run`")
+    st.sidebar.markdown("2. Ensure Ollama is running with models")
     st.sidebar.markdown("3. Click 'Refresh Models' below")
     model_name = None
 
@@ -121,12 +128,9 @@ def call_ollama(prompt: str, model: str, temperature: float) -> Optional[str]:
 
 # Function to test connection
 def test_connection() -> bool:
-    """Test if Ollama is accessible"""
-    try:
-        response = requests.get(f"{ollama_url}/api/tags", timeout=5)
-        return response.status_code == 200
-    except:
-        return False
+    """Test if Llama Stack is accessible"""
+    service = get_llama_stack_service(llama_stack_url)
+    return service.test_connection()
 
 # Connection status and model refresh
 with st.sidebar:
@@ -137,7 +141,7 @@ with st.sidebar:
     
     with col1:
         if st.button("Test Connection"):
-            logger.info("🔍 Testing connection to Ollama...")
+            logger.info("🔍 Testing connection to Llama Stack...")
             with st.spinner("Testing..."):
                 if test_connection():
                     logger.info("✅ Connection successful!")
@@ -150,7 +154,8 @@ with st.sidebar:
         if st.button("Refresh Models"):
             with st.spinner("Loading models..."):
                 # Clear the cache to force reload
-                get_ollama_models.clear()
+                get_llama_stack_models.clear()
+                get_llama_stack_service.clear()
                 st.rerun()  # Refresh the page to reload models
 
 # Display chat messages from history
@@ -199,14 +204,16 @@ with st.sidebar:
     st.markdown("---")
     st.subheader("ℹ️ About")
     st.markdown("""
-    This app connects directly to Ollama running locally.
+    This app uses Llama Stack for model discovery and Ollama for chat.
     
-    **Default Ollama port:** 11434
+    **Default ports:**
+    - Llama Stack: 5000
+    - Ollama: 11434
     
     **Getting started:**
-    1. Install Ollama
-    2. Run `ollama serve`
-    3. Pull a model: `ollama pull llama3.2:3b`
+    1. Run `ollama serve`
+    2. Pull models: `ollama pull llama3.2:3b`  
+    3. Run `llama stack run`
     4. Start chatting!
     """)
 
