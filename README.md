@@ -21,6 +21,8 @@ A simple Streamlit chat interface that connects directly to Ollama.
 
 ## 🚀 Quick Start
 
+> **⚠️ Important Note**: The Llama Stack server is **external to this project** and must be running separately. This Streamlit app connects to an existing Llama Stack instance - it does not manage or embed the server itself.
+
 ### 1. Install Prerequisites
 
 ```bash
@@ -48,13 +50,15 @@ poetry shell
 ### 3. Start Services
 
 ```bash
-# Terminal 1: Start Ollama
+# Start Ollama (managed by this setup)
 ollama serve
 
-# Terminal 2: Pull a model and start Llama Stack
+# Pull a model for Ollama
 ollama pull llama3.2:3b
-llama stack run --port 8321
 ```
+
+**External Requirement**: Ensure your Llama Stack server is running separately:
+
 
 ### 4. Run the App
 
