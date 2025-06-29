@@ -1,6 +1,4 @@
 import streamlit as st
-import requests
-import json
 import logging
 from typing import Optional
 from llama_stack_service import LlamaStackService
@@ -16,7 +14,7 @@ logger.info("🚀 Streamlit Ollama Chat starting...")
 
 # Configure the page
 st.set_page_config(
-    page_title="Ollama Chat",
+    page_title="Llama Stack Chat",
     page_icon="🦙",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -30,14 +28,7 @@ st.sidebar.markdown("---")
 llama_stack_url = st.sidebar.text_input(
     "Llama Stack URL",
     value="http://localhost:8321",
-    help="URL of your Llama Stack server"
-)
-
-# Ollama configuration (for direct chat communication)
-ollama_url = st.sidebar.text_input(
-    "Ollama URL", 
-    value="http://localhost:11434",
-    help="URL of your Ollama server for chat communication"
+    help="URL of your Llama Stack server (handles both model discovery and chat)"
 )
 
 # Create Llama Stack service instance
@@ -85,43 +76,21 @@ temperature = st.sidebar.slider(
 )
 
 # Main app
-st.title("🦙 Ollama Chat")
+st.title("🦙 Llama Stack Chat")
 
 # Initialize chat history
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Function to call Ollama API
-def call_ollama(prompt: str, model: str, temperature: float) -> Optional[str]:
-    """Call the Ollama API with the given prompt"""
+# Function to call Llama Stack
+def call_llama_stack(prompt: str, model: str, temperature: float) -> Optional[str]:
+    """Call the Llama Stack API with the given prompt"""
     try:
-        payload = {
-            "model": model,
-            "prompt": prompt,
-            "stream": False,
-            "options": {
-                "temperature": temperature
-            }
-        }
+        service = get_llama_stack_service(llama_stack_url)
+        return service.send_message(prompt, model, temperature)
         
-        response = requests.post(
-            f"{ollama_url}/api/generate",
-            json=payload,
-            timeout=60
-        )
-        
-        response.raise_for_status()
-        result = response.json()
-        
-        return result.get("response", "No response received from the model.")
-        
-    except requests.exceptions.ConnectionError:
-        return "❌ Connection error: Could not connect to Ollama. Please check if Ollama is running."
-    except requests.exceptions.Timeout:
-        return "❌ Timeout error: The request took too long. Please try again."
-    except requests.exceptions.HTTPError as e:
-        return f"❌ HTTP error: {e.response.status_code} - {e.response.text}"
     except Exception as e:
+        logger.error(f"❌ Error calling Llama Stack: {e}")
         return f"❌ Unexpected error: {str(e)}"
 
 # This function is now replaced by the cached get_ollama_models() function above
@@ -179,7 +148,7 @@ if model_name:  # Only show chat input if a model is available
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
                 logger.info(f"🤖 Generating response with {model_name} (temp: {temperature})")
-                response = call_ollama(prompt, model_name, temperature)
+                response = call_llama_stack(prompt, model_name, temperature)
                 if response:
                     logger.info(f"✅ Response generated ({len(response)} chars)")
                 else:
@@ -189,7 +158,7 @@ if model_name:  # Only show chat input if a model is available
         # Add assistant response to chat history
         st.session_state.messages.append({"role": "assistant", "content": response})
 else:
-    st.info("🔄 Please ensure Ollama is running and models are available to start chatting.")
+    st.info("🔄 Please ensure Llama Stack is running and models are available to start chatting.")
 
 # Clear chat history
 with st.sidebar:
@@ -204,16 +173,15 @@ with st.sidebar:
     st.markdown("---")
     st.subheader("ℹ️ About")
     st.markdown("""
-    This app uses Llama Stack for model discovery and Ollama for chat.
+    This app uses Llama Stack for both model discovery and chat generation.
     
-    **Default ports:**
-    - Llama Stack: 5000
-    - Ollama: 11434
+    **Default port:**
+    - Llama Stack: 8321
     
     **Getting started:**
-    1. Run `ollama serve`
+    1. Run `ollama serve` (backend for Llama Stack)
     2. Pull models: `ollama pull llama3.2:3b`  
-    3. Run `llama stack run`
+    3. Run `llama stack run --port 8321`
     4. Start chatting!
     """)
 

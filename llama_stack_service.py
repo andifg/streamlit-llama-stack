@@ -2,7 +2,7 @@
 Llama Stack Service Module
 
 This module handles all interactions with the Llama Stack server,
-including model discovery and connection testing.
+including model discovery, connection testing, and react agent chat.
 """
 
 import logging
@@ -25,6 +25,8 @@ class LlamaStackService:
         """
         self.base_url = base_url
         self._client = None
+        self._agent_id = None
+        self._session_id = None
     
     @property
     def client(self) -> LlamaStackClient:
@@ -126,3 +128,45 @@ class LlamaStackService:
         except Exception as e:
             logger.error(f"❌ Error getting model info for {model_id}: {e}")
             return None
+    
+    def send_message(self, message: str, model_id: str, temperature: float = 0.7) -> Optional[str]:
+        """
+        Send a message using Llama Stack inference endpoint
+        
+        Args:
+            message: The user message
+            model_id: The model to use
+            temperature: Sampling temperature
+            
+        Returns:
+            Model response or None if error
+        """
+        try:
+            logger.info(f"💬 Sending message to model {model_id}: {message[:50]}{'...' if len(message) > 50 else ''}")
+            
+            # Send message using the inference endpoint
+            response = self.client.inference.chat_completion(
+                model_id=model_id,
+                messages=[{
+                    "role": "user", 
+                    "content": message
+                }]
+            )
+            
+            # Extract the response content
+            if hasattr(response, 'completion_message') and hasattr(response.completion_message, 'content'):
+                if isinstance(response.completion_message.content, str):
+                    response_text = response.completion_message.content
+                else:
+                    response_text = str(response.completion_message.content)
+            elif isinstance(response, dict):
+                response_text = response.get('content', str(response))
+            else:
+                response_text = str(response)
+            
+            logger.info(f"✅ Model response received")
+            return response_text
+            
+        except Exception as e:
+            logger.error(f"❌ Error sending message to model: {e}")
+            return f"❌ Error communicating with model: {str(e)}"
