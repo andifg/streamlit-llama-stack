@@ -18,8 +18,6 @@ black = "^25.1.0"
 isort = "^5.13.0"
 mypy = "^1.8.0"
 
-[tool.poetry.scripts]
-
 [tool.black]
 line-length = 88
 target-version = ['py312']

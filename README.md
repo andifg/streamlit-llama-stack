@@ -128,6 +128,54 @@ poetry shell
 poetry build
 ```
 
+## 🧹 Code Quality Tools
+
+This project includes automated code quality tools to maintain consistent code standards:
+
+### Quality Tools Included:
+- **black**: Code formatting (line length 88, Python 3.12 target)
+- **isort**: Import organization (black-compatible profile)
+- **mypy**: Type checking with strict configuration
+
+### Using Makefile Commands:
+
+```bash
+# Format code with black
+make format
+
+# Sort imports with isort
+make sort-imports
+
+# Run type checking with mypy
+make type-check
+
+# Run all quality checks
+make quality-check
+
+# Fix all quality issues (format + sort imports)
+make quality-fix
+
+# Show available commands
+make help
+```
+
+### Manual Commands (alternative):
+
+```bash
+# Format code
+poetry run black .
+
+# Sort imports
+poetry run isort .
+
+# Type check
+poetry run mypy .
+
+# Check without fixing
+poetry run black --check .
+poetry run isort --check-only .
+```
+
 ## 🐛 Troubleshooting
 
 ### Common Issues:
