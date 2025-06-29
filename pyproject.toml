@@ -19,10 +19,6 @@ isort = "^5.13.0"
 mypy = "^1.8.0"
 
 [tool.poetry.scripts]
-format = "black ."
-sort-imports = "isort ."
-type-check = "mypy ."
-quality-check = "sh -c 'black --check . && isort --check-only . && mypy .'"
 
 [tool.black]
 line-length = 88
