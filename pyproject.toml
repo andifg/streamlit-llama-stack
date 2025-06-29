@@ -15,6 +15,28 @@ fire = "^0.7.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^25.1.0"
+isort = "^5.13.0"
+mypy = "^1.8.0"
+
+[tool.poetry.scripts]
+format = "black ."
+sort-imports = "isort ."
+type-check = "mypy ."
+quality-check = "sh -c 'black --check . && isort --check-only . && mypy .'"
+
+[tool.black]
+line-length = 88
+target-version = ['py312']
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
 
 [build-system]
 requires = ["poetry-core"]
