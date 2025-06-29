@@ -14,76 +14,49 @@ A simple Streamlit chat interface that connects directly to Ollama.
 ## 📋 Prerequisites
 
 - Python 3.12 or higher
+- `make` (usually pre-installed on macOS/Linux)
 - [Poetry](https://python-poetry.org/) for dependency management
 - [Ollama](https://ollama.ai/) installed and running
 - [Llama Stack](https://github.com/meta-llama/llama-stack) server running
 
-## 🛠️ Installation & Setup
+## 🚀 Quick Start
 
-### 1. Install Poetry (if not already installed)
+### 1. Install Prerequisites
 
 ```bash
-# On macOS/Linux:
+# Install Poetry
 curl -sSL https://install.python-poetry.org | python3 -
 
-# On Windows (PowerShell):
-(Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | python -
+# Install Ollama (macOS)
+brew install ollama
+# OR Linux: curl -fsSL https://ollama.ai/install.sh | sh
 
-# Or via pip:
-pip install poetry
+# Install Llama Stack
+pip install llama-stack
 ```
 
 ### 2. Setup Project
 
 ```bash
-# Clone or navigate to your project directory
-cd streamlit-ollama-chat
-
-# Install dependencies with Poetry (including llama-stack-client)
+# Install dependencies with Poetry
 poetry install
 
 # Activate the virtual environment
 poetry shell
 ```
 
-### 3. Install and Setup Ollama
+### 3. Start Services
 
 ```bash
-# Install Ollama
-# On macOS:
-brew install ollama
-
-# On Linux:
-curl -fsSL https://ollama.ai/install.sh | sh
-
-# On Windows: Download from https://ollama.ai/download/windows
-```
-
-```bash
-# Start Ollama service (runs on port 11434 by default)
+# Terminal 1: Start Ollama
 ollama serve
 
-# In another terminal, pull a model
+# Terminal 2: Pull a model and start Llama Stack
 ollama pull llama3.2:3b
-
-# Check available models
-ollama list
-```
-
-### 4. Install and Setup Llama Stack
-
-```bash
-# Install Llama Stack
-pip install llama-stack
-
-# Configure Llama Stack to use Ollama
-llama stack configure
-
-# Start Llama Stack server (runs on port 8321 by default)
 llama stack run --port 8321
 ```
 
-## 🎯 Running the App
+### 4. Run the App
 
 ```bash
 # Run the Streamlit app with Poetry
@@ -100,33 +73,6 @@ The app will open in your browser at `http://localhost:8501`.
 - **Temperature**: Control response randomness (0.0 = deterministic, 1.0 = creative)
 - **Auto-refresh**: Models are cached for 30 seconds and can be manually refreshed
 
-## 🔧 Available Commands
-
-```bash
-# Install dependencies
-poetry install
-
-# Add a new dependency
-poetry add package-name
-
-# Add development dependency
-poetry add --group dev package-name
-
-# Update dependencies
-poetry update
-
-# Show dependency tree
-poetry show --tree
-
-# Run commands in Poetry environment
-poetry run streamlit run app.py
-
-# Activate shell
-poetry shell
-
-# Build package
-poetry build
-```
 
 ## 🧹 Code Quality Tools
 
@@ -157,23 +103,6 @@ make quality-fix
 
 # Show available commands
 make help
-```
-
-### Manual Commands (alternative):
-
-```bash
-# Format code
-poetry run black .
-
-# Sort imports
-poetry run isort .
-
-# Type check
-poetry run mypy .
-
-# Check without fixing
-poetry run black --check .
-poetry run isort --check-only .
 ```
 
 ## 🐛 Troubleshooting
