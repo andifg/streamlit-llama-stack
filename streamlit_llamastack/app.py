@@ -79,6 +79,7 @@ temperature = st.sidebar.slider(
 
 # Main app
 st.title("🦙 Llama Stack Chat")
+st.caption("AI-powered chat interface using Llama Stack")
 
 # Initialize chat history
 if "messages" not in st.session_state:
@@ -172,15 +173,27 @@ else:
         "🔄 Please ensure Llama Stack is running and models are available to start chatting."
     )
 
-# Clear chat history
+# Clear chat history and reset session
 with st.sidebar:
     st.markdown("---")
-    if st.button("🗑️ Clear Chat History"):
-        logger.info(
-            f"🗑️ Clearing chat history ({len(st.session_state.messages)} messages)"
-        )
-        st.session_state.messages = []
-        st.rerun()
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("🗑️ Clear Chat"):
+            logger.info(
+                f"🗑️ Clearing chat history ({len(st.session_state.messages)} messages)"
+            )
+            st.session_state.messages = []
+            st.rerun()
+    
+    with col2:
+        if st.button("🔄 Reset Agent"):
+            logger.info("🔄 Resetting ReActAgent session")
+            service = get_llama_stack_service(llama_stack_url)
+            service.reset_session()
+            st.session_state.messages = []
+            st.success("ReActAgent session reset!")
+            st.rerun()
 
 # Info section
 with st.sidebar:
@@ -188,7 +201,13 @@ with st.sidebar:
     st.subheader("ℹ️ About")
     st.markdown(
         """
-    This app uses Llama Stack for both model discovery and chat generation.
+    This app uses Llama Stack **ReActAgent** for AI-powered conversations with advanced step-by-step reasoning capabilities.
+    
+    **Features:**
+    - 🧠 **ReActAgent** with sophisticated reasoning patterns
+    - 🔧 Model discovery and selection  
+    - ⚙️ Temperature control for response creativity
+    - 🔄 Session management for conversation context
     
     **Default port:**
     - Llama Stack: 8321
@@ -197,6 +216,12 @@ with st.sidebar:
     1. Run `ollama serve` (backend for Llama Stack)
     2. Pull models: `ollama pull llama3.2:3b`  
     3. Run `llama stack run --port 8321`
-    4. Start chatting!
+    4. Start chatting with the ReActAgent!
+    
+    **ReActAgent Features:**
+    - **ReAct (Reasoning + Acting)** pattern for problem solving
+    - Step-by-step reasoning with thought processes
+    - Maintains conversation context within sessions
+    - Can be extended with tools and capabilities
     """
     )
