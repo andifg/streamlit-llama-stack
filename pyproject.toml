@@ -1,10 +1,13 @@
 [tool.poetry]
-name = "streamlit-ollama-chat"
+name = "streamlit-llamastack"
 version = "0.1.0"
-description = "A simple Streamlit chat interface for Ollama"
+description = "A modern Streamlit chat interface for Llama Stack"
 authors = ["Your Name <your.email@example.com>"]
 readme = "README.md"
-package-mode = false
+packages = [{include = "streamlit_llamastack"}]
+
+[tool.poetry.scripts]
+streamlit-llamastack = "streamlit_llamastack.cli:main"
 
 [tool.poetry.dependencies]
 python = ">=3.12"

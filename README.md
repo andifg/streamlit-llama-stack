@@ -1,15 +1,16 @@
-# 🦙 Streamlit Ollama Chat
+# 🦙 Streamlit LlamaStack
 
-A simple Streamlit chat interface that connects directly to Ollama.
+A modern Streamlit chat interface for Llama Stack models.
 
 ## 🚀 Features
 
-- **Llama Stack Integration**: Uses Llama Stack client for model discovery
+- **Llama Stack Integration**: Uses Llama Stack client for model discovery and chat
 - **Dynamic Model Loading**: Automatically detects and loads all available inference models
-- **Hybrid Architecture**: Llama Stack for models, Ollama for chat generation
+- **Clean Package Structure**: Organized as a proper Python package
 - **Temperature Control**: Adjust response creativity
-- **Connection Testing**: Built-in health check for both services
+- **Connection Testing**: Built-in health check for Llama Stack
 - **Model Discovery**: Automatically detect available models
+- **Easy CLI Access**: Run with `poetry run streamlit-llamastack`
 
 ## 📋 Prerequisites
 
@@ -63,16 +64,18 @@ ollama pull llama3.2:3b
 ### 4. Run the App
 
 ```bash
-# Run the Streamlit app with Poetry
-poetry run streamlit run app.py
+# Run the Streamlit app with the poetry script
+poetry run streamlit-llamastack
+
+# Or alternatively, run directly with streamlit
+poetry run streamlit run streamlit_llamastack/app.py
 ```
 
 The app will open in your browser at `http://localhost:8501`.
 
 ## ⚙️ Configuration
 
-- **Llama Stack URL**: Default is `http://localhost:8321` (for model discovery)
-- **Ollama URL**: Default is `http://localhost:11434` (for chat generation)
+- **Llama Stack URL**: Default is `http://localhost:8321` (for model discovery and chat)
 - **Model**: Automatically loads all inference models available via Llama Stack
 - **Temperature**: Control response randomness (0.0 = deterministic, 1.0 = creative)
 - **Auto-refresh**: Models are cached for 30 seconds and can be manually refreshed
@@ -154,13 +157,16 @@ ollama pull mistral:7b
 ## 📁 Project Structure
 
 ```
-streamlit-ollama-chat/
-├── pyproject.toml          # Poetry configuration
-├── app.py                  # Main Streamlit application
-├── llama_stack_service.py  # Llama Stack service integration
-├── README.md               # This file
-├── .gitignore              # Git ignore patterns
-└── .venv/                  # Virtual environment (created by Poetry)
+streamlit-llama-stack/
+├── streamlit_llamastack/   # Main package directory
+│   ├── __init__.py        # Package initialization
+│   ├── cli.py             # CLI entry point
+│   ├── app.py             # Main Streamlit application
+│   └── service.py         # Llama Stack service integration
+├── pyproject.toml         # Poetry configuration with scripts
+├── README.md              # This file
+├── .gitignore             # Git ignore patterns
+└── .venv/                 # Virtual environment (created by Poetry)
 ```
 
 ## 🔗 Useful Links
