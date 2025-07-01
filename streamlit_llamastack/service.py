@@ -154,7 +154,7 @@ class LlamaStackService:
                     client=self.client,
                     model=model_id,
                     tools=["builtin::websearch"],
-                    instructions="You are a web search assistant, must use websearch tool to look up the most current and precise information available.",
+                    instructions="You are a web search assistant. Always Use the provided brave_search tool to find the answer for the user prompt.",
                 )
                 logger.info("✅ ReActAgent created successfully")
 
