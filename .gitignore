@@ -10,7 +10,6 @@ __pycache__/
 .Python
 build/
 develop-eggs/
-dist/
 downloads/
 eggs/
 .eggs/
@@ -26,8 +25,8 @@ share/python-wheels/
 *.egg
 MANIFEST
 
-# Poetry
-poetry.lock
+# uv
+# Note: uv.lock should be committed for reproducible builds
 dist/
 .venv/
 
@@ -38,7 +37,7 @@ ENV/
 env.bak/
 venv.bak/
 .env
-.venv
+# .venv is handled above in uv section
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -65,5 +64,12 @@ coverage.xml
 .pytest_cache/
 cover/
 
+# Environment files
 .envrc
+.envrc.skeleton
+
+# IDE
 .idea/
+
+# uv cache (optional - uv manages this automatically)
+.uv/

@@ -2,26 +2,26 @@
 
 # Format code with black
 format:
-	poetry run black .
+	uv run black .
 
 # Sort imports with isort
 sort-imports:
-	poetry run isort .
+	uv run isort .
 
 # Type check with mypy
 type-check:
-	poetry run mypy .
+	uv run mypy .
 
 # Run all quality checks
 quality-check:
-	poetry run black --check .
-	poetry run isort --check-only .
-	poetry run mypy .
+	uv run black --check .
+	uv run isort --check-only .
+	uv run mypy .
 
 # Fix all quality issues
 quality-fix:
-	poetry run black .
-	poetry run isort .
+	uv run black .
+	uv run isort .
 
 # Help target
 help:
