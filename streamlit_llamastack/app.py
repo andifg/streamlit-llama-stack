@@ -77,6 +77,8 @@ temperature = st.sidebar.slider(
     help="Controls randomness in the response",
 )
 
+
+
 # Display options
 show_turn_details = st.sidebar.checkbox(
     "Show Turn Details by Default",
