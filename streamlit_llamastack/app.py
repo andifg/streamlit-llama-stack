@@ -77,6 +77,13 @@ temperature = st.sidebar.slider(
     help="Controls randomness in the response",
 )
 
+# Display options
+show_turn_details = st.sidebar.checkbox(
+    "Show Turn Details by Default",
+    value=False,
+    help="Automatically expand reasoning steps and tool usage sections"
+)
+
 # Main app
 st.title("🦙 Llama Stack Chat")
 st.caption("AI-powered chat interface using Llama Stack")
@@ -85,17 +92,98 @@ st.caption("AI-powered chat interface using Llama Stack")
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+# Display chat messages from history
+logger.info(f"📝 Displaying {len(st.session_state.messages)} messages from history")
+for i, message in enumerate(st.session_state.messages):
+    logger.info(f"📝 Message {i+1}: role={message['role']}, has_turn_details={'turn_details' in message}")
+    with st.chat_message(message["role"]):
+        # For assistant messages with turn details, show the final response prominently
+        if message["role"] == "assistant" and "turn_details" in message:
+            turn_details = message["turn_details"]
+            # Use final_response from turn_details if available, otherwise use message content
+            final_response = turn_details.get("final_response", message["content"])
+            
+            # Show final response with nice formatting
+            st.markdown("### 🤖 Final Response")
+            st.markdown(final_response)
+            
+            # Display turn details for assistant messages if available
+            # Show turn metadata
+            with st.expander("📊 Turn Details", expanded=show_turn_details):
+                st.markdown("#### 📈 Turn Information")
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.markdown(f"**Turn ID:** {turn_details.get('turn_id', 'N/A')}")
+                    if turn_details.get('created_at'):
+                        st.markdown(f"**Started:** {turn_details['created_at']}")
+                with col2:
+                    st.markdown(f"**Status:** {turn_details.get('status', 'N/A')}")
+                    if turn_details.get('completed_at'):
+                        st.markdown(f"**Completed:** {turn_details['completed_at']}")
+            
+            # Show reasoning steps if any
+            if turn_details.get("reasoning_steps"):
+                with st.expander("🧠 Reasoning Steps", expanded=show_turn_details):
+                    st.markdown("#### 🔍 Internal Reasoning Process")
+                    for i, step in enumerate(turn_details["reasoning_steps"], 1):
+                        step_type = step.get('type', 'unknown')
+                        step_id = step.get('step_id', 'N/A')
+                        content = step.get('content', 'No content')
+                        
+                        st.markdown(f"**Step {i} ({step_type}):** {content}")
+                        st.markdown(f"*Step ID: {step_id}*")
+                        
+                        if step.get('tool_calls'):
+                            st.markdown(f"*Tool calls in this step: {step['tool_calls']}*")
+            
+            # Show tool usage if any
+            if turn_details.get("tool_usage"):
+                with st.expander("🔧 Tool Usage", expanded=show_turn_details):
+                    st.markdown("#### 🛠️ External Tool Execution")
+                    for i, tool in enumerate(turn_details["tool_usage"], 1):
+                        tool_name = tool.get('tool_name', 'Unknown Tool')
+                        status = tool.get('status', 'unknown')
+                        step_id = tool.get('step_id', 'N/A')
+                        call_id = tool.get('call_id', 'N/A')
+                        
+                        st.markdown(f"**Tool {i}:** {tool_name} ({status})")
+                        st.markdown(f"*Step ID: {step_id} | Call ID: {call_id}*")
+                        
+                        if tool.get('arguments'):
+                            st.markdown("**Arguments:**")
+                            st.json(tool['arguments'])
+                        
+                        if tool.get('output'):
+                            st.markdown("**Output:**")
+                            # Try to parse JSON output for better display
+                            try:
+                                import json
+                                output_data = json.loads(tool['output'])
+                                st.json(output_data)
+                            except:
+                                st.text(tool['output'])
+        else:
+            # For user messages or simple assistant messages, show content normally
+            st.markdown(message["content"])
 
-# Function to call Llama Stack
-def call_llama_stack(prompt: str, model: str, temperature: float) -> Optional[str]:
-    """Call the Llama Stack API with the given prompt"""
+# Function to call Llama Stack with turn details
+def call_llama_stack_with_details(prompt: str, model: str, temperature: float) -> dict:
+    """Call the Llama Stack API with the given prompt and return turn details"""
     try:
         service = get_llama_stack_service(llama_stack_url)
-        return service.send_message(prompt, model, temperature)
+        return service.send_message_with_turn_details(prompt, model, temperature)
 
     except Exception as e:
         logger.error(f"❌ Error calling Llama Stack: {e}")
-        return f"❌ Unexpected error: {str(e)}"
+        return {
+            "success": False,
+            "error": f"❌ Unexpected error: {str(e)}",
+            "final_response": f"❌ Unexpected error: {str(e)}",
+            "reasoning_steps": [],
+            "tool_usage": [],
+            "turn_id": "error",
+            "status": "error"
+        }
 
 
 # This function is now replaced by the cached get_ollama_models() function above
@@ -134,11 +222,6 @@ with st.sidebar:
                 st.cache_resource.clear()
                 st.rerun()  # Refresh the page to reload models
 
-# Display chat messages from history
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
-
 # Chat input
 if model_name:  # Only show chat input if a model is available
     if prompt := st.chat_input("What would you like to ask?"):
@@ -149,25 +232,93 @@ if model_name:  # Only show chat input if a model is available
         # Add user message to chat history
         st.session_state.messages.append({"role": "user", "content": prompt})
 
-        # Display user message
-        with st.chat_message("user"):
-            st.markdown(prompt)
-
         # Generate and display assistant response
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
                 logger.info(
                     f"🤖 Generating response with {model_name} (temp: {temperature})"
                 )
-                response = call_llama_stack(prompt, model_name, temperature)
-                if response:
-                    logger.info(f"✅ Response generated ({len(response)} chars)")
+                turn_details = call_llama_stack_with_details(prompt, model_name, temperature)
+                
+                if turn_details["success"]:
+                    logger.info(f"✅ Response generated with turn ID: {turn_details['turn_id']}")
+                    
+                    # Display reasoning steps if any
+                    if turn_details["reasoning_steps"]:
+                        with st.expander("🧠 Reasoning Steps", expanded=show_turn_details):
+                            st.markdown("#### 🔍 Internal Reasoning Process")
+                            for i, step in enumerate(turn_details["reasoning_steps"], 1):
+                                step_type = step.get('type', 'unknown')
+                                step_id = step.get('step_id', 'N/A')
+                                content = step.get('content', 'No content')
+                                
+                                st.markdown(f"**Step {i} ({step_type}):** {content}")
+                                st.markdown(f"*Step ID: {step_id}*")
+                                
+                                if step.get('tool_calls'):
+                                    st.markdown(f"*Tool calls in this step: {step['tool_calls']}*")
+                    
+                    # Display tool usage if any
+                    if turn_details["tool_usage"]:
+                        with st.expander("🔧 Tool Usage", expanded=show_turn_details):
+                            st.markdown("#### 🛠️ External Tool Execution")
+                            for i, tool in enumerate(turn_details["tool_usage"], 1):
+                                tool_name = tool.get('tool_name', 'Unknown Tool')
+                                status = tool.get('status', 'unknown')
+                                step_id = tool.get('step_id', 'N/A')
+                                call_id = tool.get('call_id', 'N/A')
+                                
+                                st.markdown(f"**Tool {i}:** {tool_name} ({status})")
+                                st.markdown(f"*Step ID: {step_id} | Call ID: {call_id}*")
+                                
+                                if tool.get('arguments'):
+                                    st.markdown("**Arguments:**")
+                                    st.json(tool['arguments'])
+                                
+                                if tool.get('output'):
+                                    st.markdown("**Output:**")
+                                    # Try to parse JSON output for better display
+                                    try:
+                                        import json
+                                        output_data = json.loads(tool['output'])
+                                        st.json(output_data)
+                                    except:
+                                        st.text(tool['output'])
+                    
+                    # Display final response with nice formatting
+                    final_response = turn_details["final_response"]
+                    st.markdown("---")
+                    st.markdown("### 🤖 Final Response")
+                    st.markdown(final_response)
+                    
+                    # Store turn details in session state for later reference
+                    turn_info = {
+                        "turn_id": turn_details["turn_id"],
+                        "status": turn_details["status"],
+                        "reasoning_steps": turn_details["reasoning_steps"],
+                        "tool_usage": turn_details["tool_usage"],
+                        "final_response": final_response,
+                        "created_at": turn_details.get("created_at"),
+                        "completed_at": turn_details.get("completed_at")
+                    }
+                    
+                    # Add assistant response to chat history with turn details
+                    st.session_state.messages.append({
+                        "role": "assistant", 
+                        "content": final_response,
+                        "turn_details": turn_info
+                    })
                 else:
-                    logger.error("❌ No response received")
-                st.markdown(response)
-
-        # Add assistant response to chat history
-        st.session_state.messages.append({"role": "assistant", "content": response})
+                    error_msg = turn_details.get("error", "Unknown error occurred")
+                    logger.error(f"❌ Error: {error_msg}")
+                    st.error(f"❌ Error: {error_msg}")
+                    st.session_state.messages.append({
+                        "role": "assistant", 
+                        "content": f"❌ Error: {error_msg}"
+                    })
+                
+                # Rerun to display the complete updated chat history
+                st.rerun()
 else:
     st.info(
         "🔄 Please ensure Llama Stack is running and models are available to start chatting."
@@ -208,6 +359,7 @@ with st.sidebar:
     - 🔧 LLM model discovery and selection (LLM type only)
     - ⚙️ Temperature control for response creativity
     - 🔄 Session management for conversation context
+    - 📊 **Turn Details** - View reasoning steps and tool usage
     
     **Default port:**
     - Llama Stack: 8321
@@ -223,5 +375,6 @@ with st.sidebar:
     - Step-by-step reasoning with thought processes
     - Maintains conversation context within sessions
     - Can be extended with tools and capabilities
+    - **Turn Details**: View internal reasoning steps and tool usage
     """
     )

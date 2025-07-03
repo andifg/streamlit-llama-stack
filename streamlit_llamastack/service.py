@@ -255,6 +255,182 @@ class LlamaStackService:
             logger.error(f"❌ Error communicating with ReActAgent: {e}")
             return f"❌ Error communicating with ReActAgent: {str(e)}"
 
+    def send_message_with_turn_details(
+        self, message: str, model_id: str, temperature: float = 0.7
+    ) -> dict:
+        """
+        Send a message using ReActAgent and return detailed turn information
+
+        Args:
+            message: The user message
+            model_id: The model to use
+            temperature: Sampling temperature (note: may not be used by ReActAgent)
+
+        Returns:
+            Dictionary containing turn details including reasoning steps and tool usage
+        """
+        try:
+            logger.info(
+                f"💬 Sending message to ReActAgent with {model_id}: {message[:50]}{'...' if len(message) > 50 else ''}"
+            )
+
+            # Get agent and session
+            agent = self.get_agent(model_id)
+            session_id = self.get_session_id(model_id)
+
+            # Create a turn with the agent (non-streaming)
+            user_message = UserMessage(content=message, role="user")
+            turn = agent.create_turn(
+                messages=[user_message], session_id=session_id, stream=False
+            )
+
+            # Extract detailed turn information
+            turn_details = {
+                "success": True,
+                "final_response": "Sorry, I couldn't process your request properly.",
+                "reasoning_steps": [],
+                "tool_usage": [],
+                "turn_id": "unknown",  # Will be updated below
+                "status": getattr(turn, "status", "unknown"),
+                "raw_turn": str(turn)
+            }
+
+            # Debug: Log all available attributes of the turn object
+            logger.info(f"🔍 Turn object type: {type(turn)}")
+            logger.info(f"🔍 Turn object dir: {dir(turn)}")
+            logger.info(f"🔍 Turn object attributes: {[attr for attr in dir(turn) if not attr.startswith('_')]}")
+            
+            # Try different possible attribute names for turn ID
+            possible_id_attrs = ['id', 'turn_id', 'identifier', 'uuid', 'turn_uuid']
+            for attr in possible_id_attrs:
+                value = getattr(turn, attr, None)
+                if value:
+                    logger.info(f"🔍 Found turn ID in attribute '{attr}': {value}")
+                    turn_details["turn_id"] = str(value)
+                    break
+            else:
+                logger.warning(f"⚠️ No turn ID found in any of the expected attributes: {possible_id_attrs}")
+                # Try to extract from string representation
+                turn_str = str(turn)
+                if "id=" in turn_str:
+                    import re
+                    match = re.search(r'id=([^,\s]+)', turn_str)
+                    if match:
+                        turn_details["turn_id"] = match.group(1)
+                        logger.info(f"🔍 Extracted turn ID from string: {turn_details['turn_id']}")
+
+            try:
+                logger.info(f"🔍 Analyzing turn structure: {turn}")
+                
+                # Extract steps from the turn
+                steps = getattr(turn, "steps", [])
+                if steps:
+                    logger.info(f"🔍 Found {len(steps)} steps in turn")
+                    
+                    for i, step in enumerate(steps):
+                        step_type = getattr(step, "step_type", "unknown")
+                        step_id = getattr(step, "step_id", f"step_{i}")
+                        
+                        logger.info(f"🔍 Processing step {i+1}: {step_type} (ID: {step_id})")
+                        
+                        if step_type == "inference":
+                            # Handle inference step
+                            api_model_response = getattr(step, "api_model_response", None)
+                            if api_model_response:
+                                content = getattr(api_model_response, "content", "")
+                                role = getattr(api_model_response, "role", "assistant")
+                                stop_reason = getattr(api_model_response, "stop_reason", "")
+                                
+                                # Check if this step has tool calls
+                                tool_calls = getattr(api_model_response, "tool_calls", [])
+                                if tool_calls:
+                                    # This is a reasoning step that decided to use tools
+                                    reasoning_content = f"Assistant decided to use tools. Stop reason: {stop_reason}"
+                                    turn_details["reasoning_steps"].append({
+                                        "type": "inference",
+                                        "content": reasoning_content,
+                                        "step_id": step_id,
+                                        "tool_calls": len(tool_calls)
+                                    })
+                                    
+                                    # Extract tool call details
+                                    for tool_call in tool_calls:
+                                        tool_name = getattr(tool_call, "tool_name", "unknown_tool")
+                                        arguments = getattr(tool_call, "arguments", {})
+                                        call_id = getattr(tool_call, "call_id", "")
+                                        
+                                        turn_details["tool_usage"].append({
+                                            "tool_name": tool_name,
+                                            "arguments": arguments,
+                                            "call_id": call_id,
+                                            "step_id": step_id,
+                                            "status": "requested"
+                                        })
+                                else:
+                                    # This is a final response step
+                                    if content:
+                                        turn_details["final_response"] = content
+                                        turn_details["reasoning_steps"].append({
+                                            "type": "final_response",
+                                            "content": f"Final response generated. Stop reason: {stop_reason}",
+                                            "step_id": step_id
+                                        })
+                        
+                        elif step_type == "tool_execution":
+                            # Handle tool execution step
+                            tool_calls = getattr(step, "tool_calls", [])
+                            tool_responses = getattr(step, "tool_responses", [])
+                            
+                            logger.info(f"🔍 Tool execution step: {len(tool_calls)} calls, {len(tool_responses)} responses")
+                            
+                            # Match tool responses to tool calls
+                            for tool_response in tool_responses:
+                                call_id = getattr(tool_response, "call_id", "")
+                                content = getattr(tool_response, "content", "")
+                                tool_name = getattr(tool_response, "tool_name", "unknown_tool")
+                                
+                                # Find matching tool call
+                                for tool_usage in turn_details["tool_usage"]:
+                                    if tool_usage.get("call_id") == call_id:
+                                        tool_usage["output"] = content
+                                        tool_usage["status"] = "completed"
+                                        tool_usage["step_id"] = step_id
+                                        break
+                                
+                                # If no matching tool call found, add as new entry
+                                else:
+                                    turn_details["tool_usage"].append({
+                                        "tool_name": tool_name,
+                                        "call_id": call_id,
+                                        "output": content,
+                                        "step_id": step_id,
+                                        "status": "completed"
+                                    })
+
+                # Extract turn metadata
+                turn_details["created_at"] = getattr(turn, "created_at", None)
+                turn_details["completed_at"] = getattr(turn, "completed_at", None)
+
+            except Exception as extract_error:
+                logger.warning(f"⚠️ Error extracting turn details: {extract_error}")
+                turn_details["success"] = False
+                turn_details["error"] = str(extract_error)
+
+            logger.info(f"✅ ReActAgent turn details extracted")
+            return turn_details
+
+        except Exception as e:
+            logger.error(f"❌ Error communicating with ReActAgent: {e}")
+            return {
+                "success": False,
+                "error": f"Error communicating with ReActAgent: {str(e)}",
+                "final_response": f"❌ Error communicating with ReActAgent: {str(e)}",
+                "reasoning_steps": [],
+                "tool_usage": [],
+                "turn_id": "error",
+                "status": "error"
+            }
+
     def reset_session(self) -> None:
         """Reset the current session to start a fresh conversation"""
         logger.info("🔄 Resetting ReActAgent session")
