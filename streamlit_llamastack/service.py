@@ -44,10 +44,10 @@ class LlamaStackService:
 
     def get_available_models(self) -> List[str]:
         """
-        Get list of available inference models from Llama Stack
+        Get list of available LLM models from Llama Stack
 
         Returns:
-            List of model names/identifiers
+            List of model names/identifiers (only LLM type models)
         """
         try:
             logger.info(f"🔗 Connecting to Llama Stack at: {self.base_url}")
@@ -61,6 +61,13 @@ class LlamaStackService:
             if models_response:
                 for model in models_response:
                     try:
+                        # Check if this is an LLM type model
+                        logger.info(f"🔍 Model: {model}")
+                        model_type = getattr(model, "model_type", None)
+                        if model_type and str(model_type).lower() != "llm":
+                            logger.info(f"🔍 Skipping non-LLM model: {model} (type: {model_type})")
+                            continue
+
                         # Try different attribute names using getattr for safety
                         identifier = getattr(model, "identifier", None)
                         if identifier:
@@ -91,7 +98,7 @@ class LlamaStackService:
                             f"⚠️ Error processing model {model}: {model_error}"
                         )
 
-            logger.info(f"📊 Extracted models: {models}")
+            logger.info(f"📊 Extracted LLM models: {models}")
             return models
 
         except Exception as e:

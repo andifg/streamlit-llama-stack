@@ -43,7 +43,7 @@ def get_llama_stack_service(base_url: str) -> LlamaStackService:
 # Get available models from Llama Stack
 @st.cache_data(ttl=30)  # Cache for 30 seconds to avoid repeated API calls
 def get_llama_stack_models(base_url: str) -> List[str]:
-    """Get list of available inference models from Llama Stack with caching"""
+    """Get list of available LLM models from Llama Stack with caching"""
     service = get_llama_stack_service(base_url)
     return service.get_available_models()
 
@@ -53,16 +53,16 @@ available_models = get_llama_stack_models(llama_stack_url)
 
 model_name: Optional[str] = None
 if available_models:
-    logger.info(f"📊 Found {len(available_models)} models: {available_models}")
-    st.sidebar.success(f"✅ Found {len(available_models)} model(s)")
+    logger.info(f"📊 Found {len(available_models)} LLM models: {available_models}")
+    st.sidebar.success(f"✅ Found {len(available_models)} LLM model(s)")
     model_name = st.sidebar.selectbox(
-        "Model", options=available_models, index=0, help="Select the model to use"
+        "LLM Model", options=available_models, index=0, help="Select the LLM model to use"
     )
 else:
-    logger.warning("⚠️ No models found in Llama Stack!")
-    st.sidebar.error("❌ No models found in Llama Stack")
+    logger.warning("⚠️ No LLM models found in Llama Stack!")
+    st.sidebar.error("❌ No LLM models found in Llama Stack")
     st.sidebar.markdown("**Please:**")
-    st.sidebar.markdown("1. Ensure Llama Stack is running: `llama stack run`")
+    st.sidebar.markdown("1. Ensure Llama Stack is running: `INFERENCE_MODEL=llama3.2:3b uv run --with llama-stack llama stack build --template ollama --image-type venv --run`")
     st.sidebar.markdown("2. Ensure Ollama is running with models")
     st.sidebar.markdown("3. Click 'Refresh Models' below")
     model_name = None
@@ -205,7 +205,7 @@ with st.sidebar:
     
     **Features:**
     - 🧠 **ReActAgent** with sophisticated reasoning patterns
-    - 🔧 Model discovery and selection  
+    - 🔧 LLM model discovery and selection (LLM type only)
     - ⚙️ Temperature control for response creativity
     - 🔄 Session management for conversation context
     
@@ -215,7 +215,7 @@ with st.sidebar:
     **Getting started:**
     1. Run `ollama serve` (backend for Llama Stack)
     2. Pull models: `ollama pull llama3.2:3b`  
-    3. Run `llama stack run --port 8321`
+    3. Run `INFERENCE_MODEL=llama3.2:3b uv run --with llama-stack llama stack build --template ollama --image-type venv --run`
     4. Start chatting with the ReActAgent!
     
     **ReActAgent Features:**
